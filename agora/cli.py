@@ -108,8 +108,8 @@ def setup():
     """Install the /debate Claude Code slash command."""
     agora_bin = shutil.which("agora")
     if agora_bin is None:
-        typer.echo("Error: could not find agora on PATH.", err=True)
-        raise typer.Exit(1)
+        print("Error: could not find agora on PATH.", file=sys.stderr)
+        sys.exit(1)
 
     agora_bin_posix = Path(agora_bin).as_posix()
 
@@ -135,9 +135,9 @@ def setup():
     debate_md = commands_dir / "debate.md"
     debate_md.write_text(content, encoding="utf-8")
 
-    typer.echo(f"Installed: {debate_md}")
-    typer.echo(f"Briefs:    {briefs_dir}")
-    typer.echo(f"Output:    {output_dir}")
+    print(f"Installed: {debate_md}")
+    print(f"Briefs:    {briefs_dir}")
+    print(f"Output:    {output_dir}")
 
 
 def update():
@@ -145,19 +145,19 @@ def update():
     source_dir = Path(__file__).parent.parent
 
     if not (source_dir / ".git").exists():
-        typer.echo("Error: agora does not appear to be installed from a git clone.", err=True)
-        raise typer.Exit(1)
+        print("Error: agora does not appear to be installed from a git clone.", file=sys.stderr)
+        sys.exit(1)
 
-    typer.echo("Pulling latest changes...")
+    print("Pulling latest changes...")
     result = subprocess.run(["git", "pull"], cwd=source_dir)
     if result.returncode != 0:
-        typer.echo("Error: git pull failed.", err=True)
-        raise typer.Exit(1)
+        print("Error: git pull failed.", file=sys.stderr)
+        sys.exit(1)
 
-    typer.echo("Reinstalling...")
+    print("Reinstalling...")
     result = subprocess.run([sys.executable, "-m", "pip", "install", "-e", str(source_dir)])
     if result.returncode != 0:
-        typer.echo("Error: reinstall failed.", err=True)
-        raise typer.Exit(1)
+        print("Error: reinstall failed.", file=sys.stderr)
+        sys.exit(1)
 
-    typer.echo("Done.")
+    print("Done.")
