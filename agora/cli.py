@@ -1,5 +1,6 @@
 import asyncio
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -138,6 +139,22 @@ def setup():
     print(f"Installed: {debate_md}")
     print(f"Briefs:    {briefs_dir}")
     print(f"Output:    {output_dir}")
+
+    scripts_dir = Path(agora_bin).parent
+    if platform.system() == "Windows":
+        ps_cmd = (
+            f'[Environment]::SetEnvironmentVariable('
+            f'"PATH", "{scripts_dir};" + '
+            f'[Environment]::GetEnvironmentVariable("PATH", "User"), "User")'
+        )
+        result = subprocess.run(["powershell", "-Command", ps_cmd])
+        if result.returncode == 0:
+            print(f"Added to PATH: {scripts_dir}")
+            print("Open a new terminal for the PATH change to take effect.")
+        else:
+            print(f"Could not update PATH automatically. Add this manually: {scripts_dir}")
+    else:
+        print(f"Add this to your PATH: {scripts_dir}")
 
 
 def update():
