@@ -1,6 +1,7 @@
 import asyncio
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -12,7 +13,7 @@ from .brief import parse_brief
 from .debate import run_debate
 from .report import render
 
-app = typer.Typer(help="Agora — run autonomous multi-agent debates from a markdown brief.")
+app = typer.Typer(help="Agora -- run autonomous multi-agent debates from a markdown brief.")
 
 _DEBATE_COMMAND_TEMPLATE = """\
 ---
@@ -23,20 +24,20 @@ The user wants to run a structured debate. Their input: **$ARGUMENTS**
 
 Follow these steps exactly:
 
-## Step 1 — Parse the two options
+## Step 1 -- Parse the two options
 
 Extract Option A and Option B from the arguments. They may be separated by "vs", "versus", "or", a comma, or a slash. If you cannot identify two distinct options, stop and ask the user to clarify with the format: `Option A vs Option B`.
 
-## Step 2 — Summarise the conversation context
+## Step 2 -- Summarise the conversation context
 
-Review the conversation history above this command. Write a concise 3–6 sentence background context that captures:
+Review the conversation history above this command. Write a concise 3-6 sentence background context that captures:
 - What problem or decision is being discussed
 - Any constraints, requirements, or goals that were mentioned
 - Relevant technical, business, or organisational details
 
 If the conversation has no useful context (e.g. this was the first message), write a short neutral description of the decision instead.
 
-## Step 3 — Create a session folder and write the brief
+## Step 3 -- Create a session folder and write the brief
 
 Run this command to create a unique session folder for this debate and capture the GUID it prints:
 
@@ -56,15 +57,15 @@ Should we go with {Option A} over {Option B}?
 {conversation context summary from Step 2}
 
 ## Personas
-- For: {Option A} Advocate — argues strongly in favour of {Option A} and its specific benefits
-- Against: {Option B} Advocate — argues strongly in favour of {Option B} as the better choice
-- Neutral: Decision Analyst — weighs trade-offs objectively and seeks the best practical outcome
+- For: {Option A} Advocate -- argues strongly in favour of {Option A} and its specific benefits
+- Against: {Option B} Advocate -- argues strongly in favour of {Option B} as the better choice
+- Neutral: Decision Analyst -- weighs trade-offs objectively and seeks the best practical outcome
 
 ## Rounds
 2
 ```
 
-## Step 4 — Run agora
+## Step 4 -- Run agora
 
 Run the following command and wait for it to complete (it may take a minute or two):
 
@@ -72,7 +73,7 @@ Run the following command and wait for it to complete (it may take a minute or t
 "__AGORA_BIN__" "__DEBATES_DIR__/{guid}/brief.md" --output "__DEBATES_DIR__/{guid}/output"
 ```
 
-## Step 5 — Display the synthesis
+## Step 5 -- Display the synthesis
 
 After agora finishes, find the most recently modified file in `__DEBATES_DIR__/{guid}/output/` and read it. Display the full contents of the report to the user.
 """
@@ -131,6 +132,19 @@ def setup():
     workspace = Path.home() / ".agora"
     debates_dir = workspace / "debates"
     debates_dir.mkdir(parents=True, exist_ok=True)
+
+    # Migrate any sessions from the old repo-local debates/ folder
+    local_debates = Path(__file__).parent.parent / "debates"
+    if local_debates.exists() and local_debates != debates_dir:
+        moved = 0
+        for session in local_debates.iterdir():
+            if session.is_dir():
+                dest = debates_dir / session.name
+                if not dest.exists():
+                    shutil.move(str(session), str(dest))
+                    moved += 1
+        if moved:
+            print(f"Migrated {moved} session(s) from {local_debates} to {debates_dir}")
 
     debates_posix = debates_dir.as_posix()
 
@@ -267,6 +281,166 @@ def update():
 
     pyproject_after = (source_dir / "pyproject.toml").read_text(encoding="utf-8")
     if pyproject_after != pyproject_before:
-        print("pyproject.toml changed — run 'uv pip install -e .' to pick up new dependencies or entry points.")
+        print("pyproject.toml changed -- run 'uv pip install -e .' to pick up new dependencies or entry points.")
     else:
         print("Done.")
+
+
+def clean():
+    """List saved /debate sessions and archive or delete them."""
+    workspace = Path.home() / ".agora"
+    debates_dir = workspace / "debates"
+    archive_dir = workspace / "archive"
+
+    if not debates_dir.exists():
+        print("No debates directory found. Nothing to clean.")
+        return
+
+    # Collect all session folders with metadata
+    sessions = []
+    for session_path in sorted(debates_dir.iterdir()):
+        if not session_path.is_dir():
+            continue
+
+        title = "(untitled)"
+        date_str = "unknown date"
+
+        brief_file = session_path / "brief.md"
+        if brief_file.exists():
+            for line in brief_file.read_text(encoding="utf-8").splitlines():
+                if line.startswith("# Brief:"):
+                    title = line[len("# Brief:"):].strip()
+                    break
+
+        output_dir = session_path / "output"
+        if output_dir.exists():
+            for f in output_dir.iterdir():
+                if f.suffix == ".md":
+                    m = re.search(r"(\d{8})-(\d{6})", f.stem)
+                    if m:
+                        d, t = m.group(1), m.group(2)
+                        date_str = f"{d[0:4]}-{d[4:6]}-{d[6:8]} {t[0:2]}:{t[2:4]}:{t[4:6]}"
+                    break
+
+        sessions.append((session_path, title, date_str))
+
+    if not sessions:
+        print("No debate sessions found.")
+        return
+
+    print(f"Found {len(sessions)} debate session(s):\n")
+    for i, (_, title, date) in enumerate(sessions, 1):
+        print(f"  {i:>2}. [{date}]  {title}")
+
+    print()
+    print("Options:")
+    print("  [a] Archive all   -- move sessions to ~/.agora/archive/")
+    print("  [d] Delete all    -- permanently remove sessions")
+    print("  [i] Interactive   -- decide each session individually")
+    print("  [q] Quit")
+    print()
+
+    choice = input("Choice: ").strip().lower()
+
+    if choice in ("q", ""):
+        print("Aborted.")
+        return
+
+    def do_archive(path: Path, title: str) -> None:
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        dest = archive_dir / path.name
+        shutil.move(str(path), str(dest))
+        print(f"  Archived: {title}")
+
+    def do_delete(path: Path, title: str) -> None:
+        shutil.rmtree(path)
+        print(f"  Deleted:  {title}")
+
+    if choice == "a":
+        print(f"\nArchiving {len(sessions)} session(s)...")
+        for path, title, _ in sessions:
+            do_archive(path, title)
+        print(f"\nDone. Archived to: {archive_dir}")
+
+    elif choice == "d":
+        confirm = input(f"\nPermanently delete all {len(sessions)} session(s)? [y/N] ").strip().lower()
+        if confirm != "y":
+            print("Aborted.")
+            return
+        for path, title, _ in sessions:
+            do_delete(path, title)
+        print("\nDone.")
+
+    elif choice == "i":
+        print()
+        archived = deleted = skipped = 0
+        for path, title, date in sessions:
+            print(f"  [{date}]  {title}")
+            action = input("    [a] Archive  [d] Delete  [s] Skip -- action: ").strip().lower()
+            if action == "a":
+                do_archive(path, title)
+                archived += 1
+            elif action == "d":
+                do_delete(path, title)
+                deleted += 1
+            else:
+                print("    Skipped.")
+                skipped += 1
+            print()
+        print(f"Done. Archived: {archived}  Deleted: {deleted}  Skipped: {skipped}")
+
+    else:
+        print("Invalid choice. Aborted.")
+
+
+def help_cmd():
+    """Show help for all agora-* commands."""
+    print("""
+Agora -- autonomous multi-agent debate tool
+==========================================
+
+Commands:
+
+  agora <brief.md> [options]
+      Run a structured multi-agent debate from a markdown brief file.
+      Reports are written to the output directory on completion.
+
+      Options:
+        --rounds N       Number of debate rounds (default: from brief, or 2)
+        --output DIR     Directory to write the report (default: ./output)
+        --model MODEL    Claude model to use (e.g. claude-opus-4-6)
+
+      Env var:  AGORA_MODEL=<model>  -- set a default model without --model
+
+  agora-setup
+      Install the /debate Claude Code slash command and add agora to your PATH.
+      Run once after cloning and installing the package.
+
+  agora-update
+      Pull the latest changes from git.
+      Tells you if a reinstall (uv pip install -e .) is needed.
+
+  agora-clean
+      List all /debate sessions stored in ~/.agora/debates/ and choose to:
+        - Archive them  -> moved to ~/.agora/archive/
+        - Delete them   -> permanently removed
+        - Interactive   -> decide each session one at a time
+
+  agora-uninstall
+      Remove the /debate slash command, the ~/.agora/ workspace directory,
+      and the PATH entry added by agora-setup.
+      Delete the repo folder afterwards to complete removal.
+
+  agora-help
+      Show this message.
+
+Quick start:
+  /debate REST vs GraphQL     run a debate inside any Claude Code conversation
+  agora briefs/example.md     run a debate from a brief file on the command line
+
+Writing a brief:
+  Only ## Topic and ## Context are required. Add ## Personas, ## Constraints,
+  and ## Rounds to customise the debate. See briefs/example_orm.md for a
+  full example.
+""")
+
