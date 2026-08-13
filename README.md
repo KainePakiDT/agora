@@ -27,7 +27,10 @@ git clone https://github.com/KainePakiDT/agora.git
 cd agora
 uv venv
 uv pip install -e .
+agora setup
 ```
+
+`agora setup` installs the `/debate` Claude Code slash command to `~/.claude/commands/` and creates a `~/.agora/` workspace for briefs and output.
 
 ---
 
