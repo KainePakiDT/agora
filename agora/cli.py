@@ -143,6 +143,10 @@ def setup():
     print(f"Briefs:    {briefs_dir}")
     print(f"Output:    {output_dir}")
 
+    _add_to_path(scripts_dir)
+
+
+def _add_to_path(scripts_dir: Path) -> None:
     if platform.system() == "Windows":
         ps_cmd = (
             f'[Environment]::SetEnvironmentVariable('
@@ -156,7 +160,25 @@ def setup():
         else:
             print(f"Could not update PATH automatically. Add this manually: {scripts_dir}")
     else:
-        print(f"Add this to your PATH: {scripts_dir}")
+        shell = os.environ.get("SHELL", "")
+        if "zsh" in shell:
+            rc_file = Path.home() / ".zshrc"
+            export_line = f'export PATH="{scripts_dir}:$PATH"'
+        elif "fish" in shell:
+            rc_file = Path.home() / ".config" / "fish" / "config.fish"
+            export_line = f'fish_add_path "{scripts_dir}"'
+        else:
+            rc_file = Path.home() / ".bashrc"
+            export_line = f'export PATH="{scripts_dir}:$PATH"'
+
+        existing = rc_file.read_text(encoding="utf-8") if rc_file.exists() else ""
+        if str(scripts_dir) in existing:
+            print(f"PATH already configured in {rc_file}")
+        else:
+            with open(rc_file, "a", encoding="utf-8") as f:
+                f.write(f"\n# Added by agora-setup\n{export_line}\n")
+            print(f"Added to PATH in {rc_file}")
+            print(f"Run 'source {rc_file}' or open a new terminal for the change to take effect.")
 
 
 def update():
