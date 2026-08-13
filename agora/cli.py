@@ -102,7 +102,6 @@ def main(
     typer.echo(f"\nReport written to: {report_path}")
 
 
-@app.command()
 def setup():
     """Install the /debate Claude Code slash command."""
     agora_bin = shutil.which("agora")

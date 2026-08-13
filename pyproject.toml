@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 agora = "agora.cli:app"
+agora-setup = "agora.cli:setup"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agora"]
