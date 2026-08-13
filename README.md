@@ -25,24 +25,23 @@ uv --version
 ```bash
 git clone https://github.com/KainePakiDT/agora.git
 cd agora
-uv venv
-uv pip install -e .
 ```
 
-Then run `agora-setup` using the full path (since agora isn't on PATH yet):
+Then run the install script for your platform:
 
 ```bash
-# Windows
-.venv\Scripts\agora-setup
-
 # Mac / Linux
-.venv/bin/agora-setup
+bash install.sh
+
+# Windows
+install.bat
 ```
 
-`agora-setup`:
-- Installs the `/debate` Claude Code slash command to `~/.claude/commands/`
-- Creates a `~/.agora/` workspace for briefs and output
-- Adds the agora scripts to your PATH permanently
+This will:
+- Create a virtual environment and install agora
+- Install the `/debate` Claude Code slash command to `~/.claude/commands/`
+- Create a `~/.agora/` workspace for briefs and output
+- Add agora to your PATH permanently
 
 Open a new terminal after setup — `agora`, `agora-setup`, and `agora-update` will then work from anywhere.
 
