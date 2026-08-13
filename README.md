@@ -53,6 +53,26 @@ agora-update
 
 Pulls the latest changes from the git repo. If `pyproject.toml` changed (new dependencies or entry points), you will be prompted to reinstall manually.
 
+## Uninstalling
+
+From the repo directory:
+
+```bash
+# Mac / Linux
+bash uninstall.sh
+
+# Windows
+uninstall.bat
+```
+
+This removes the `/debate` slash command, the `~/.agora/` workspace, and the PATH entry. Then delete the repo folder to finish.
+
+Alternatively, if agora is already on your PATH:
+
+```bash
+agora-uninstall
+```
+
 ---
 
 ## Running a debate

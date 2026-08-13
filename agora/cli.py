@@ -181,6 +181,67 @@ def _add_to_path(scripts_dir: Path) -> None:
             print(f"Run 'source {rc_file}' or open a new terminal for the change to take effect.")
 
 
+def uninstall():
+    """Remove the /debate slash command, workspace, and PATH entry."""
+    scripts_dir = Path(sys.argv[0]).resolve().parent
+
+    # Remove /debate slash command
+    debate_md = Path.home() / ".claude" / "commands" / "debate.md"
+    if debate_md.exists():
+        debate_md.unlink()
+        print(f"Removed: {debate_md}")
+    else:
+        print(f"Not found (skipping): {debate_md}")
+
+    # Remove ~/.agora workspace
+    workspace = Path.home() / ".agora"
+    if workspace.exists():
+        import shutil as _shutil
+        _shutil.rmtree(workspace)
+        print(f"Removed: {workspace}")
+    else:
+        print(f"Not found (skipping): {workspace}")
+
+    # Remove PATH entry
+    _remove_from_path(scripts_dir)
+
+    print("")
+    print(f"To finish, delete the repo: {Path(__file__).parent.parent}")
+
+
+def _remove_from_path(scripts_dir: Path) -> None:
+    if platform.system() == "Windows":
+        ps_cmd = (
+            f'$p = [Environment]::GetEnvironmentVariable("PATH", "User"); '
+            f'$p = ($p -split ";" | Where-Object {{ $_ -ne "{scripts_dir}" }}) -join ";"; '
+            f'[Environment]::SetEnvironmentVariable("PATH", $p, "User")'
+        )
+        result = subprocess.run(["powershell", "-Command", ps_cmd])
+        if result.returncode == 0:
+            print(f"Removed from PATH: {scripts_dir}")
+            print("Open a new terminal for the PATH change to take effect.")
+        else:
+            print(f"Could not update PATH automatically. Remove this manually: {scripts_dir}")
+    else:
+        shell = os.environ.get("SHELL", "")
+        if "zsh" in shell:
+            rc_file = Path.home() / ".zshrc"
+        elif "fish" in shell:
+            rc_file = Path.home() / ".config" / "fish" / "config.fish"
+        else:
+            rc_file = Path.home() / ".bashrc"
+
+        if rc_file.exists():
+            original = rc_file.read_text(encoding="utf-8")
+            cleaned = "\n".join(
+                line for line in original.splitlines()
+                if str(scripts_dir) not in line and line != "# Added by agora-setup"
+            )
+            rc_file.write_text(cleaned, encoding="utf-8")
+            print(f"Removed from PATH in {rc_file}")
+            print(f"Run 'source {rc_file}' or open a new terminal for the change to take effect.")
+
+
 def update():
     """Pull latest changes from the git repo and reinstall."""
     source_dir = Path(__file__).parent.parent

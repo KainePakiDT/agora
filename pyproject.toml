@@ -15,6 +15,7 @@ dependencies = [
 agora = "agora.cli:app"
 agora-setup = "agora.cli:setup"
 agora-update = "agora.cli:update"
+agora-uninstall = "agora.cli:uninstall"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agora"]
