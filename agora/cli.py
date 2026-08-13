@@ -148,21 +148,16 @@ def update():
         print("Error: agora does not appear to be installed from a git clone.", file=sys.stderr)
         sys.exit(1)
 
+    pyproject_before = (source_dir / "pyproject.toml").read_text(encoding="utf-8")
+
     print("Pulling latest changes...")
     result = subprocess.run(["git", "pull"], cwd=source_dir)
     if result.returncode != 0:
         print("Error: git pull failed.", file=sys.stderr)
         sys.exit(1)
 
-    print("Reinstalling...")
-    uv = shutil.which("uv")
-    if uv:
-        cmd = [uv, "pip", "install", "-e", str(source_dir)]
+    pyproject_after = (source_dir / "pyproject.toml").read_text(encoding="utf-8")
+    if pyproject_after != pyproject_before:
+        print("pyproject.toml changed — run 'uv pip install -e .' to pick up new dependencies or entry points.")
     else:
-        cmd = [sys.executable, "-m", "pip", "install", "-e", str(source_dir)]
-    result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print("Error: reinstall failed.", file=sys.stderr)
-        sys.exit(1)
-
-    print("Done.")
+        print("Done.")
