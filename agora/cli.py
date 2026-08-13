@@ -36,9 +36,15 @@ Review the conversation history above this command. Write a concise 3–6 senten
 
 If the conversation has no useful context (e.g. this was the first message), write a short neutral description of the decision instead.
 
-## Step 3 — Write the brief file
+## Step 3 — Create a session folder and write the brief
 
-Write a brief markdown file to `__BRIEFS_DIR__/debate_current.md` with **exactly** this structure (substituting the placeholders):
+Run this command to create a unique session folder for this debate and capture the GUID it prints:
+
+```bash
+"__PYTHON_BIN__" -c "import uuid, os; g=str(uuid.uuid4()); p='__DEBATES_DIR__/'+g; os.makedirs(p+'/output', exist_ok=True); print(g)"
+```
+
+The printed output is `{guid}`. Write a brief markdown file to `__DEBATES_DIR__/{guid}/brief.md` with **exactly** this structure (substituting the placeholders):
 
 ```
 # Brief: {Option A} vs {Option B}
@@ -63,12 +69,12 @@ Should we go with {Option A} over {Option B}?
 Run the following command and wait for it to complete (it may take a minute or two):
 
 ```bash
-"__AGORA_BIN__" "__BRIEFS_DIR__/debate_current.md" --output "__OUTPUT_DIR__"
+"__AGORA_BIN__" "__DEBATES_DIR__/{guid}/brief.md" --output "__DEBATES_DIR__/{guid}/output"
 ```
 
 ## Step 5 — Display the synthesis
 
-After agora finishes, find the most recently modified file in `__OUTPUT_DIR__` and read it. Display the full contents of the report to the user.
+After agora finishes, find the most recently modified file in `__DEBATES_DIR__/{guid}/output/` and read it. Display the full contents of the report to the user.
 """
 
 
@@ -115,16 +121,18 @@ def setup():
         print("Error: could not find agora binary.", file=sys.stderr)
         sys.exit(1)
 
+    python_bin = scripts_dir / ("python.exe" if platform.system() == "Windows" else "python")
+    if not python_bin.exists():
+        python_bin = scripts_dir / "python"
+
     agora_bin_posix = agora_bin.as_posix()
+    python_bin_posix = python_bin.as_posix()
 
     workspace = Path.home() / ".agora"
-    briefs_dir = workspace / "briefs"
-    output_dir = workspace / "output"
-    briefs_dir.mkdir(parents=True, exist_ok=True)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    debates_dir = workspace / "debates"
+    debates_dir.mkdir(parents=True, exist_ok=True)
 
-    briefs_posix = briefs_dir.as_posix()
-    output_posix = output_dir.as_posix()
+    debates_posix = debates_dir.as_posix()
 
     commands_dir = Path.home() / ".claude" / "commands"
     commands_dir.mkdir(parents=True, exist_ok=True)
@@ -132,16 +140,15 @@ def setup():
     content = (
         _DEBATE_COMMAND_TEMPLATE
         .replace("__AGORA_BIN__", agora_bin_posix)
-        .replace("__BRIEFS_DIR__", briefs_posix)
-        .replace("__OUTPUT_DIR__", output_posix)
+        .replace("__PYTHON_BIN__", python_bin_posix)
+        .replace("__DEBATES_DIR__", debates_posix)
     )
 
     debate_md = commands_dir / "debate.md"
     debate_md.write_text(content, encoding="utf-8")
 
     print(f"Installed: {debate_md}")
-    print(f"Briefs:    {briefs_dir}")
-    print(f"Output:    {output_dir}")
+    print(f"Debates:   {debates_dir}")
 
     _add_to_path(scripts_dir)
 
