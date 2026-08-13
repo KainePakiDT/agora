@@ -1,6 +1,8 @@
 import asyncio
 import os
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import typer
@@ -136,3 +138,26 @@ def setup():
     typer.echo(f"Installed: {debate_md}")
     typer.echo(f"Briefs:    {briefs_dir}")
     typer.echo(f"Output:    {output_dir}")
+
+
+def update():
+    """Pull latest changes from the git repo and reinstall."""
+    source_dir = Path(__file__).parent.parent
+
+    if not (source_dir / ".git").exists():
+        typer.echo("Error: agora does not appear to be installed from a git clone.", err=True)
+        raise typer.Exit(1)
+
+    typer.echo("Pulling latest changes...")
+    result = subprocess.run(["git", "pull"], cwd=source_dir)
+    if result.returncode != 0:
+        typer.echo("Error: git pull failed.", err=True)
+        raise typer.Exit(1)
+
+    typer.echo("Reinstalling...")
+    result = subprocess.run([sys.executable, "-m", "pip", "install", "-e", str(source_dir)])
+    if result.returncode != 0:
+        typer.echo("Error: reinstall failed.", err=True)
+        raise typer.Exit(1)
+
+    typer.echo("Done.")

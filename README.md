@@ -32,6 +32,14 @@ agora-setup
 
 `agora-setup` installs the `/debate` Claude Code slash command to `~/.claude/commands/` and creates a `~/.agora/` workspace for briefs and output.
 
+## Updating
+
+```bash
+agora-update
+```
+
+Pulls the latest changes from the git repo and reinstalls.
+
 ---
 
 ## Running a debate
