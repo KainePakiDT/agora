@@ -45,6 +45,23 @@ This will:
 
 Open a new terminal after setup — `agora`, `agora-setup`, and `agora-update` will then work from anywhere.
 
+## Using /debate in Claude Code
+
+Once `agora-setup` has run, the `/debate` slash command is available inside any Claude Code conversation. Type it directly in the chat:
+
+```
+/debate Option A vs Option B
+```
+
+Claude will use the current conversation as context, run the debate automatically, and display the full report with decision matrix and recommendation inline.
+
+Examples:
+```
+/debate microservices vs monolith
+/debate REST vs GraphQL
+/debate rewrite vs refactor
+```
+
 ## Updating
 
 ```bash
