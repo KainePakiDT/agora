@@ -155,7 +155,12 @@ def update():
         sys.exit(1)
 
     print("Reinstalling...")
-    result = subprocess.run([sys.executable, "-m", "pip", "install", "-e", str(source_dir)])
+    uv = shutil.which("uv")
+    if uv:
+        cmd = [uv, "pip", "install", "-e", str(source_dir)]
+    else:
+        cmd = [sys.executable, "-m", "pip", "install", "-e", str(source_dir)]
+    result = subprocess.run(cmd)
     if result.returncode != 0:
         print("Error: reinstall failed.", file=sys.stderr)
         sys.exit(1)
