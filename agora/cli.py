@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 from pathlib import Path
 
 import typer
@@ -9,6 +10,63 @@ from .debate import run_debate
 from .report import render
 
 app = typer.Typer(help="Agora — run autonomous multi-agent debates from a markdown brief.")
+
+_DEBATE_COMMAND_TEMPLATE = """\
+---
+description: Debate two options using the agora multi-agent tool, seeded with the current conversation context
+---
+
+The user wants to run a structured debate. Their input: **$ARGUMENTS**
+
+Follow these steps exactly:
+
+## Step 1 — Parse the two options
+
+Extract Option A and Option B from the arguments. They may be separated by "vs", "versus", "or", a comma, or a slash. If you cannot identify two distinct options, stop and ask the user to clarify with the format: `Option A vs Option B`.
+
+## Step 2 — Summarise the conversation context
+
+Review the conversation history above this command. Write a concise 3–6 sentence background context that captures:
+- What problem or decision is being discussed
+- Any constraints, requirements, or goals that were mentioned
+- Relevant technical, business, or organisational details
+
+If the conversation has no useful context (e.g. this was the first message), write a short neutral description of the decision instead.
+
+## Step 3 — Write the brief file
+
+Write a brief markdown file to `__BRIEFS_DIR__/debate_current.md` with **exactly** this structure (substituting the placeholders):
+
+```
+# Brief: {Option A} vs {Option B}
+
+## Topic
+Should we go with {Option A} over {Option B}?
+
+## Context
+{conversation context summary from Step 2}
+
+## Personas
+- For: {Option A} Advocate — argues strongly in favour of {Option A} and its specific benefits
+- Against: {Option B} Advocate — argues strongly in favour of {Option B} as the better choice
+- Neutral: Decision Analyst — weighs trade-offs objectively and seeks the best practical outcome
+
+## Rounds
+2
+```
+
+## Step 4 — Run agora
+
+Run the following command and wait for it to complete (it may take a minute or two):
+
+```bash
+"__AGORA_BIN__" "__BRIEFS_DIR__/debate_current.md" --output "__OUTPUT_DIR__"
+```
+
+## Step 5 — Display the synthesis
+
+After agora finishes, find the most recently modified file in `__OUTPUT_DIR__` and read it. Display the full contents of the report to the user.
+"""
 
 
 @app.command()
@@ -42,3 +100,40 @@ def main(
 
     report_path = render(transcript, model_label, output)
     typer.echo(f"\nReport written to: {report_path}")
+
+
+@app.command()
+def setup():
+    """Install the /debate Claude Code slash command."""
+    agora_bin = shutil.which("agora")
+    if agora_bin is None:
+        typer.echo("Error: could not find agora on PATH.", err=True)
+        raise typer.Exit(1)
+
+    agora_bin_posix = Path(agora_bin).as_posix()
+
+    workspace = Path.home() / ".agora"
+    briefs_dir = workspace / "briefs"
+    output_dir = workspace / "output"
+    briefs_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    briefs_posix = briefs_dir.as_posix()
+    output_posix = output_dir.as_posix()
+
+    commands_dir = Path.home() / ".claude" / "commands"
+    commands_dir.mkdir(parents=True, exist_ok=True)
+
+    content = (
+        _DEBATE_COMMAND_TEMPLATE
+        .replace("__AGORA_BIN__", agora_bin_posix)
+        .replace("__BRIEFS_DIR__", briefs_posix)
+        .replace("__OUTPUT_DIR__", output_posix)
+    )
+
+    debate_md = commands_dir / "debate.md"
+    debate_md.write_text(content, encoding="utf-8")
+
+    typer.echo(f"Installed: {debate_md}")
+    typer.echo(f"Briefs:    {briefs_dir}")
+    typer.echo(f"Output:    {output_dir}")
