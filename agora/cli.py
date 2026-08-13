@@ -107,12 +107,15 @@ def main(
 
 def setup():
     """Install the /debate Claude Code slash command."""
-    agora_bin = shutil.which("agora")
-    if agora_bin is None:
-        print("Error: could not find agora on PATH.", file=sys.stderr)
+    scripts_dir = Path(sys.argv[0]).resolve().parent
+    agora_bin = scripts_dir / ("agora.exe" if platform.system() == "Windows" else "agora")
+    if not agora_bin.exists():
+        agora_bin = scripts_dir / "agora"
+    if not agora_bin.exists():
+        print("Error: could not find agora binary.", file=sys.stderr)
         sys.exit(1)
 
-    agora_bin_posix = Path(agora_bin).as_posix()
+    agora_bin_posix = agora_bin.as_posix()
 
     workspace = Path.home() / ".agora"
     briefs_dir = workspace / "briefs"
@@ -140,7 +143,6 @@ def setup():
     print(f"Briefs:    {briefs_dir}")
     print(f"Output:    {output_dir}")
 
-    scripts_dir = Path(agora_bin).parent
     if platform.system() == "Windows":
         ps_cmd = (
             f'[Environment]::SetEnvironmentVariable('
