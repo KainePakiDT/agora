@@ -27,10 +27,24 @@ git clone https://github.com/KainePakiDT/agora.git
 cd agora
 uv venv
 uv pip install -e .
-agora-setup
 ```
 
-`agora-setup` installs the `/debate` Claude Code slash command to `~/.claude/commands/` and creates a `~/.agora/` workspace for briefs and output.
+Then run `agora-setup` using the full path (since agora isn't on PATH yet):
+
+```bash
+# Windows
+.venv\Scripts\agora-setup
+
+# Mac / Linux
+.venv/bin/agora-setup
+```
+
+`agora-setup`:
+- Installs the `/debate` Claude Code slash command to `~/.claude/commands/`
+- Creates a `~/.agora/` workspace for briefs and output
+- Adds the agora scripts to your PATH permanently
+
+Open a new terminal after setup — `agora`, `agora-setup`, and `agora-update` will then work from anywhere.
 
 ## Updating
 
@@ -38,26 +52,22 @@ agora-setup
 agora-update
 ```
 
-Pulls the latest changes from the git repo and reinstalls.
+Pulls the latest changes from the git repo. If `pyproject.toml` changed (new dependencies or entry points), you will be prompted to reinstall manually.
 
 ---
 
 ## Running a debate
 
 ```bash
-# Windows
-.venv\Scripts\agora briefs/your-brief.md
-
-# Mac / Linux
-.venv/bin/agora briefs/your-brief.md
+agora briefs/your-brief.md
 ```
 
-The debate runs automatically. When it finishes, the report is written to `output/`.
+The debate runs automatically. When it finishes, the report is written to `~/.agora/output/`.
 
 ### Try the included example
 
 ```bash
-.venv\Scripts\agora briefs/example_orm.md
+agora briefs/example_orm.md
 ```
 
 ---
@@ -113,7 +123,7 @@ agora <brief.md> [--rounds N] [--output DIR] [--model MODEL]
 You can also set the model via environment variable:
 
 ```bash
-AGORA_MODEL=claude-sonnet-4-6 .venv\Scripts\agora briefs/my-brief.md
+AGORA_MODEL=claude-sonnet-4-6 agora briefs/my-brief.md
 ```
 
 ---
